@@ -13,7 +13,8 @@ import { CommonModule } from '@angular/common';
         autoplay
         muted
         playsinline
-        [style.display]="isStreaming ? 'block' : 'none'">
+        [style.display]="isStreaming ? 'block' : 'none'"
+        [class.mirrored]="isMirrored">
       </video>
       <div
         *ngIf="!isStreaming"
@@ -49,6 +50,12 @@ import { CommonModule } from '@angular/common';
         class="btn secondary"
         (click)="toggleFullWidth()">
         {{ isFullWidth ? 'Compact View' : 'Full Width' }}
+      </button>
+
+      <button
+        class="btn secondary"
+        (click)="toggleMirror()">
+        {{ isMirrored ? 'Normal View' : 'Mirror Mode' }}
       </button>
 
       <button
@@ -132,6 +139,10 @@ import { CommonModule } from '@angular/common';
       max-height: 400px;
       object-fit: contain;
     }
+
+    #videoElement.mirrored {
+      transform: scaleX(-1);
+    }
   `]
 })
 export class CameraComponent implements OnInit, OnDestroy {
@@ -144,6 +155,7 @@ export class CameraComponent implements OnInit, OnDestroy {
   videoHeight = 300;
   isFullWidth = true;
   isFullscreen = false;
+  isMirrored = false;
 
   private stream: MediaStream | null = null;
 
@@ -285,6 +297,16 @@ export class CameraComponent implements OnInit, OnDestroy {
       this.showStatus('Full width mode activated', 'info');
     } else {
       this.showStatus('Compact view mode activated', 'info');
+    }
+  }
+
+  toggleMirror() {
+    this.isMirrored = !this.isMirrored;
+
+    if (this.isMirrored) {
+      this.showStatus('Mirror mode activated', 'info');
+    } else {
+      this.showStatus('Normal view mode activated', 'info');
     }
   }
 
