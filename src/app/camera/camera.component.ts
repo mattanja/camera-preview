@@ -14,7 +14,8 @@ import { CommonModule } from '@angular/common';
         muted
         playsinline
         [style.display]="isStreaming ? 'block' : 'none'"
-        [class.mirrored]="isMirrored">
+        [class.mirrored]="isMirrored"
+        [style.transform]="getVideoTransform()">
       </video>
       <div
         *ngIf="!isStreaming"
@@ -62,6 +63,43 @@ import { CommonModule } from '@angular/common';
         class="btn secondary"
         (click)="toggleFullscreen()">
         {{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}
+      </button>
+    </div>
+
+    <div class="controls zoom-controls" *ngIf="isStreaming">
+      <div class="zoom-buttons">
+        <button
+          class="btn zoom-btn"
+          (click)="zoomOut()"
+          [disabled]="zoomLevel <= minZoom">
+          🔍−
+        </button>
+
+        <span class="zoom-level">{{ (zoomLevel * 100).toFixed(0) }}%</span>
+
+        <button
+          class="btn zoom-btn"
+          (click)="zoomIn()"
+          [disabled]="zoomLevel >= maxZoom">
+          🔍+
+        </button>
+      </div>
+
+      <div class="zoom-slider-container">
+        <input
+          type="range"
+          class="zoom-slider"
+          [min]="minZoom"
+          [max]="maxZoom"
+          [step]="0.1"
+          [value]="zoomLevel"
+          (input)="onZoomSliderChange($event)">
+      </div>
+
+      <button
+        class="btn reset-zoom"
+        (click)="resetZoom()">
+        Reset Zoom
       </button>
     </div>
 
@@ -140,8 +178,99 @@ import { CommonModule } from '@angular/common';
       object-fit: contain;
     }
 
-    #videoElement.mirrored {
-      transform: scaleX(-1);
+    .zoom-controls {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .zoom-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .zoom-btn {
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .zoom-btn:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .zoom-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .zoom-level {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #333;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .zoom-slider-container {
+      margin-bottom: 1rem;
+    }
+
+    .zoom-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(to right, #667eea, #764ba2);
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .zoom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #667eea;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .zoom-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #667eea;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .reset-zoom {
+      background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+      width: 100%;
+    }
+
+    .reset-zoom:hover {
+      box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
     }
   `]
 })
@@ -156,6 +285,9 @@ export class CameraComponent implements OnInit, OnDestroy {
   isFullWidth = true;
   isFullscreen = false;
   isMirrored = false;
+  zoomLevel = 1;
+  minZoom = 0.5;
+  maxZoom = 3;
 
   private stream: MediaStream | null = null;
 
@@ -308,6 +440,38 @@ export class CameraComponent implements OnInit, OnDestroy {
     } else {
       this.showStatus('Normal view mode activated', 'info');
     }
+  }
+
+  getVideoTransform(): string {
+    let transform = `scale(${this.zoomLevel})`;
+    if (this.isMirrored) {
+      transform += ' scaleX(-1)';
+    }
+    return transform;
+  }
+
+  zoomIn() {
+    if (this.zoomLevel < this.maxZoom) {
+      this.zoomLevel = Math.min(this.zoomLevel + 0.2, this.maxZoom);
+      this.showStatus(`Zoom: ${(this.zoomLevel * 100).toFixed(0)}%`, 'info');
+    }
+  }
+
+  zoomOut() {
+    if (this.zoomLevel > this.minZoom) {
+      this.zoomLevel = Math.max(this.zoomLevel - 0.2, this.minZoom);
+      this.showStatus(`Zoom: ${(this.zoomLevel * 100).toFixed(0)}%`, 'info');
+    }
+  }
+
+  resetZoom() {
+    this.zoomLevel = 1;
+    this.showStatus('Zoom reset to 100%', 'info');
+  }
+
+  onZoomSliderChange(event: any) {
+    this.zoomLevel = parseFloat(event.target.value);
+    this.showStatus(`Zoom: ${(this.zoomLevel * 100).toFixed(0)}%`, 'info');
   }
 
   async toggleFullscreen() {
